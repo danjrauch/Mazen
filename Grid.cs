@@ -1,19 +1,20 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 
 namespace Mazen
 {
-    public class Grid
+    public enum Direction
     {
-        public enum Direction
-        {
-            North,
-            South,
-            East,
-            West
-        }
+        North,
+        South,
+        East,
+        West
+    }
 
-        private static readonly Dictionary<Direction, Tuple<int, int>> Moves =
+    public class Grid : IEnumerable<Cell>
+    {
+        public static readonly Dictionary<Direction, Tuple<int, int>> Moves =
             new Dictionary<Direction, Tuple<int, int>>{
                 { Direction.North, new Tuple<int, int>(-1, 0) },
                 { Direction.South, new Tuple<int, int>(1, 0) },
@@ -21,7 +22,7 @@ namespace Mazen
                 { Direction.West, new Tuple<int, int>(0, -1) },
             };
 
-        private static readonly Dictionary<Direction, Direction> inverseMoves = 
+        public static readonly Dictionary<Direction, Direction> inverseMoves =
             new Dictionary<Direction, Direction>{
                 { Direction.North, Direction.South },
                 { Direction.South, Direction.North },
@@ -32,90 +33,6 @@ namespace Mazen
         protected ulong _rows;
         protected ulong _cols;
         protected Cell[,] _grid;
-
-        public class Cell
-        {
-            private Grid _grid;
-            private ulong _row;
-            public ulong Row
-            {
-                get => _row;
-            }
-            private ulong _col;
-            public ulong Col
-            {
-                get => _col;
-            }
-            private HashSet<Direction> _edges;
-
-            public Cell(Grid grid, ulong row, ulong col)
-            {
-                _grid = grid;
-                _row = row;
-                _col = col;
-                _edges = new HashSet<Direction>();
-            }
-
-            public bool HasEdge(Direction dir)
-            {
-                return _edges.Contains(dir);
-            }
-
-            public Cell GetNeighbor(Direction dir)
-            {
-                Tuple<int, int> vec = Moves[dir];
-                ulong row = _row, col = _col;
-                switch (vec.Item1)
-                {
-                    case -1:
-                        row--;
-                        break;
-                    case 1:
-                        row++;
-                        break;
-                }
-                switch (vec.Item2)
-                {
-                    case -1:
-                        col--;
-                        break;
-                    case 1:
-                        col++;
-                        break;
-                }
-                return _grid[row, col];
-            }
-
-            public void Link(Direction dir, bool bidi = true)
-            {
-                _edges.Add(dir);
-                if (bidi)
-                {
-                    Cell neighbor = GetNeighbor(dir);
-                    neighbor.Link(inverseMoves[dir], false);
-                }
-            }
-
-            public void Unlink(Direction dir, bool bidi = true)
-            {
-                _edges.Remove(dir);
-                if (bidi)
-                {
-                    Cell neighbor = GetNeighbor(dir);
-                    neighbor.Unlink(inverseMoves[dir], false);
-                }
-            }
-
-            public List<Cell> GetValidMoves()
-            {
-                List<Cell> validMoves = new List<Cell>();
-                foreach (var dir in _edges)
-                {
-                    validMoves.Add(GetNeighbor(dir));
-                }
-                return validMoves;
-            }
-        }
 
         public Grid(ulong rows, ulong cols)
         {
@@ -139,6 +56,22 @@ namespace Mazen
             }
         }
 
+        public IEnumerator<Cell> GetEnumerator()
+        {
+            for (ulong i = 0; i < _rows; ++i)
+            {
+                for (ulong j = 0; j < _cols; ++j)
+                {
+                    yield return _grid[i, j];
+                }
+            }
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
         public override string ToString()
         {
             string output = "+";
@@ -158,10 +91,10 @@ namespace Mazen
                     Cell cell = _grid[i, j];
 
                     string body = "   ";
-                    string east_boundary = cell.HasEdge(Direction.East) ? " " : "|";
+                    string east_boundary = cell.IsLinked(Direction.East) ? " " : "|";
                     top += body + east_boundary;
 
-                    string south_boundary = cell.HasEdge(Direction.South) ? "   " : "---";
+                    string south_boundary = cell.IsLinked(Direction.South) ? "   " : "---";
                     string corner = "+";
                     bottom += south_boundary + corner;
                 }
@@ -171,6 +104,54 @@ namespace Mazen
             }
 
             return output;
+        }
+
+        public Bitmap ToPng(ulong cellSize = 10, bool includeBackgrounds = true)
+        {
+            ulong imgWidth = cellSize * _cols;
+            ulong imgHeight = cellSize * _rows;
+
+            Brush background = Brushes.White;
+            Pen wall = Pens.Black;
+
+            Bitmap mazeImage = new Bitmap((int)imgWidth, (int)imgHeight);
+
+            using (var graphics = Graphics.FromImage(mazeImage))
+            {
+                graphics.FillRectangle(background, 0, 0, imgWidth, imgHeight);
+
+                if (includeBackgrounds)
+                    foreach (var cell in _grid)
+                    {
+                        ulong x1 = cell.Col * cellSize;
+                        ulong y1 = cell.Row * cellSize;
+                        ulong x2 = (cell.Col + 1) * cellSize;
+                        ulong y2 = (cell.Row + 1) * cellSize;
+
+                        Color color = Color.OldLace; //IndianRed for path color
+                        Brush brush = new SolidBrush(color);
+                        graphics.FillRectangle(brush, x1, y1, (x2 - x1), (y2 - y1));
+                    }
+
+                foreach (var cell in _grid)
+                {
+                    ulong x1 = cell.Col * cellSize;
+                    ulong y1 = cell.Row * cellSize;
+                    ulong x2 = (cell.Col + 1) * cellSize;
+                    ulong y2 = (cell.Row + 1) * cellSize;
+
+                    if (!cell.IsLinked(Direction.North))
+                        graphics.DrawLine(wall, x1, y1, x2, y1);
+                    if (!cell.IsLinked(Direction.West))
+                        graphics.DrawLine(wall, x1, y1, x1, y2);
+                    if (!cell.IsLinked(Direction.East))
+                        graphics.DrawLine(wall, x2, y1, x2, y2);
+                    if (!cell.IsLinked(Direction.South))
+                        graphics.DrawLine(wall, x1, y2, x2, y2);
+                }
+            }
+
+            return mazeImage;
         }
     }
 }
