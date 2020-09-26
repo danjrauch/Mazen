@@ -7,11 +7,16 @@ namespace Mazen
 {
     class Program
     {
+        private const int R = 100;
+        private const int C = 100;
+
         static void Main(string[] args)
         {
-            ulong rows = 100;
-            ulong cols = 100;
+            System.Console.WriteLine(R);
+        }
 
+        void t(ulong rows, ulong cols)
+        {
             BinaryTreeMaze btm = new BinaryTreeMaze(rows, cols);
 
             //Console.WriteLine(btm.ToString());
@@ -24,8 +29,6 @@ namespace Mazen
             
             Cell source = btm[0, 0];
             Cell dest = btm[rows-1, 0];
-
-            BFS.CalculateShortestPath(source, dest);
 
             // TODO Refactor this to a OverlayPath method \/\/\/\/\/
 
@@ -41,7 +44,7 @@ namespace Mazen
                     ulong x2 = (cell.Col + 1) * cellSize;
                     ulong y2 = (cell.Row + 1) * cellSize;
 
-                    Color color = !cell.HasProperty($"{source.ToString()} - {dest.ToString()}") ? Color.OldLace : Color.IndianRed;
+                    Color color = Color.OldLace; //!cell.HasProperty($"{source.ToString()} - {dest.ToString()}") ? Color.OldLace : Color.IndianRed;
                     Brush brush = new SolidBrush(color);
                     graphics.FillRectangle(brush, x1, y1, (x2 - x1), (y2 - y1));
                 }

@@ -14,12 +14,12 @@ namespace Mazen
 
     public class Grid : IEnumerable<Cell>
     {
-        public static readonly Dictionary<Direction, Tuple<int, int>> Moves =
-            new Dictionary<Direction, Tuple<int, int>>{
-                { Direction.North, new Tuple<int, int>(-1, 0) },
-                { Direction.South, new Tuple<int, int>(1, 0) },
-                { Direction.East, new Tuple<int, int>(0, 1) },
-                { Direction.West, new Tuple<int, int>(0, -1) },
+        public static readonly Dictionary<Direction, (int, int)> Moves =
+            new Dictionary<Direction, (int, int)>{
+                { Direction.North, (-1, 0) },
+                { Direction.South, (1, 0) },
+                { Direction.East, (0, 1) },
+                { Direction.West, (0, -1) },
             };
 
         public static readonly Dictionary<Direction, Direction> inverseMoves =
@@ -48,11 +48,18 @@ namespace Mazen
         {
             get
             {
+                if (row < 0 || row >= _rows || col < 0 || col >= _cols)
+                {
+                    throw new IndexOutOfRangeException("Row and column position outside boundaries.");
+                }
                 return _grid[row, col];
             }
             set
             {
-                _grid[row, col] = value;
+                if (!(row < 0 || row >= _rows || col < 0 || col >= _cols))
+                {
+                    _grid[row, col] = value;
+                }
             }
         }
 

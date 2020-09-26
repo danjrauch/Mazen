@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Dynamic;
 
 namespace Mazen
 {
@@ -18,7 +17,6 @@ namespace Mazen
             get => _col;
         }
         private HashSet<Direction> _edges;
-        private Dictionary<string, dynamic> _properties;
 
         public Cell(Grid grid, ulong row, ulong col)
         {
@@ -26,57 +24,17 @@ namespace Mazen
             _row = row;
             _col = col;
             _edges = new HashSet<Direction>();
-            _properties = new Dictionary<string, dynamic>();
         }
 
         public Cell GetNeighbor(Direction dir)
         {
-            Tuple<int, int> vec = Grid.Moves[dir];
-            ulong row = _row, col = _col;
-            switch (vec.Item1)
-            {
-                case -1:
-                    row--;
-                    break;
-                case 1:
-                    row++;
-                    break;
-            }
-            switch (vec.Item2)
-            {
-                case -1:
-                    col--;
-                    break;
-                case 1:
-                    col++;
-                    break;
-            }
+            (int, int) vec = Grid.Moves[dir];
+            ulong row = vec.Item1 == -1 ? _row - 1 : vec.Item1 == 1 ? _row + 1 : _row;
+            ulong col = vec.Item2 == -1 ? _col - 1 : vec.Item2 == 1 ? _col + 1 : _col;
             return _grid[row, col];
         }
 
-        public void SetProperty(string key, dynamic val)
-        {
-            _properties[key] = val;
-        }
-
-        public bool HasProperty(string key)
-        {
-            return _properties.ContainsKey(key);
-        }
-
-        public dynamic GetProperty(string key)
-        {
-            if (_properties.ContainsKey(key))
-            {
-                return _properties[key];
-            }
-            return null;
-        }
-
-        public bool IsLinked(Direction dir)
-        {
-            return _edges.Contains(dir);
-        }
+        public bool IsLinked(Direction dir) => _edges.Contains(dir);
 
         public void Link(Direction dir, bool bidi = true)
         {
@@ -108,9 +66,6 @@ namespace Mazen
             return validMoves;
         }
 
-        public override string ToString()
-        {
-            return $"[{_row.ToString()}, {_col.ToString()}]";
-        }
+        public override string ToString() => $"[{_row.ToString()}, {_col.ToString()}]";
     }
 }
